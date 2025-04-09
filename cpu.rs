@@ -41,7 +41,7 @@ impl CPU {
                0x00=>{
                    return;
                }
-               //update with tests here
+               //tests for LDA and BRK
            }
        }
    }
