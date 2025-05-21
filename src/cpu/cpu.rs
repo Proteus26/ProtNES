@@ -27,48 +27,65 @@ impl CPU {
         self.update_zero_and_negative_flags(self.register_x);
     }
 
-    fn update_zero_and_negative_flags(&mut self, result: u8) {
-        if result == 0 {
-            self.status = self.status | 0b0000_0010;
-        } else {
-            self.status = self.status & 0b1111_1101;
-        }
-
-        if result & 0b1000_0000 != 0 {
-            self.status = self.status | 0b1000_0000;
-        } else {
-            self.status = self.status & 0b0111_1111;
-        }
-    }
-
     fn inx(&mut self) {
         self.register_x = self.register_x.wrapping_add(1);
         self.update_zero_and_negative_flags(self.register_x);
+    }
+
+    fn cpy(&mut self, value: u8) {
+        let result = self.register_y.wrapping_sub(value);
+        self.update_zero_and_negative_flags(result);
+
+        if self.register_y >= value {
+            self.status |= 0b0000_0001;
+        } else {
+            self.status &= 0b1111_1110;
+        }
+    }
+
+    fn update_zero_and_negative_flags(&mut self, result: u8) {
+        if result == 0 {
+            self.status |= 0b0000_0010;
+        } else {
+            self.status &= 0b1111_1101;
+        }
+
+        if result & 0b1000_0000 != 0 {
+            self.status |= 0b1000_0000;
+        } else {
+            self.status &= 0b0111_1111;
+        }
     }
 
     pub fn interpret(&mut self, program: Vec<u8>) {
         self.program_counter = 0;
 
         loop {
-            let opscode = program[self.program_counter as usize];
+            let opcode = program[self.program_counter as usize];
             self.program_counter += 1;
 
-        match opscode {
-            0xA9 => {
-                let param = program[self.program_counter as usize];
-                self.program_counter += 1;
+            match opcode {
+                0xA9 => {
+                    let param = program[self.program_counter as usize];
+                    self.program_counter += 1;
+                    self.lda(param);
+                }
 
-                self.lda(param);
+                0xAA => self.tax(),
+
+                0xE8 => self.inx(),
+
+                0xC0 => {
+                    let param = program[self.program_counter as usize];
+                    self.program_counter += 1;
+                    self.cpy(param);
+                }
+
+                // 0xE0 => {CPX to be implemented later}
+                0x00 => return,
+
+                _ => panic!("Unknown opcode: {:#X}", opcode),
             }
-
-            0xAA => self.tax(),
-
-            0xe8 => self.inx(),
-
-            0x00 => return,
-
-            //0xC0 opcode to be done
-        }
         }
     }
 }
@@ -98,7 +115,6 @@ mod test {
         let mut cpu = CPU::new();
         cpu.interpret(vec![0xa9, 0xff, 0x00]);
         assert!(cpu.status & 0b1000_0000 == 0b1000_0000);
-
     }
 
     #[test]
@@ -106,16 +122,14 @@ mod test {
         let mut cpu = CPU::new();
         cpu.register_a = 10;
         cpu.interpret(vec![0xaa, 0x00]);
-
-        assert_eq!(cpu.register_x, 10)
+        assert_eq!(cpu.register_x, 10);
     }
 
     #[test]
     fn test_5_ops_working_together() {
         let mut cpu = CPU::new();
         cpu.interpret(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
-
-        assert_eq!(cpu.register_x, 0xc1)
+        assert_eq!(cpu.register_x, 0xc1);
     }
 
     #[test]
@@ -123,7 +137,35 @@ mod test {
         let mut cpu = CPU::new();
         cpu.register_x = 0xff;
         cpu.interpret(vec![0xe8, 0xe8, 0x00]);
+        assert_eq!(cpu.register_x, 1);
+    }
 
-        assert_eq!(cpu.register_x, 1)
+    #[test]
+    fn test_0xc0_cpy_equal() {
+        let mut cpu = CPU::new();
+        cpu.register_y = 0x10;
+        cpu.interpret(vec![0xc0, 0x10, 0x00]);
+        assert!(cpu.status & 0b0000_0010 != 0);
+        assert!(cpu.status & 0b0000_0001 != 0);
+    }
+
+    #[test]
+    fn test_0xc0_cpy_less_than() {
+        let mut cpu = CPU::new();
+        cpu.register_y = 0x05;
+        cpu.interpret(vec![0xc0, 0x10, 0x00]);
+        assert!(cpu.status & 0b0000_0010 == 0);
+        assert!(cpu.status & 0b0000_0001 == 0);
+        assert!(cpu.status & 0b1000_0000 != 0);
+    }
+
+    #[test]
+    fn test_0xc0_cpy_greater_than() {
+        let mut cpu = CPU::new();
+        cpu.register_y = 0x20;
+        cpu.interpret(vec![0xc0, 0x10, 0x00]);
+        assert!(cpu.status & 0b0000_0010 == 0);
+        assert!(cpu.status & 0b0000_0001 != 0);
+        assert!(cpu.status & 0b1000_0000 == 0);
     }
 }
