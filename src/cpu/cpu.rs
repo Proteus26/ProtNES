@@ -43,6 +43,17 @@ impl CPU {
         }
     }
 
+    fn cpx(&mut self, value: u8) {
+        let result = self.register_x.wrapping_sub(value);
+        self.update_zero_and_negative_flags(result);
+
+        if self.register_x >= value {
+            self.status |= 0b0000_0001;
+        } else {
+            self.status &= 0b1111_1110;
+        }
+    }
+
     fn update_zero_and_negative_flags(&mut self, result: u8) {
         if result == 0 {
             self.status |= 0b0000_0010;
@@ -81,7 +92,13 @@ impl CPU {
                     self.cpy(param);
                 }
 
-                // 0xE0 => {CPX to be implemented later}
+                0xE0 => {
+                    let param = program[self.program_counter as usize];
+                    self.program_counter += 1;
+                    self.cpx(param);
+                }
+
+                //0xA2 - LDX
                 0x00 => return,
 
                 _ => panic!("Unknown opcode: {:#X}", opcode),
@@ -164,6 +181,36 @@ mod test {
         let mut cpu = CPU::new();
         cpu.register_y = 0x20;
         cpu.interpret(vec![0xc0, 0x10, 0x00]);
+        assert!(cpu.status & 0b0000_0010 == 0);
+        assert!(cpu.status & 0b0000_0001 != 0);
+        assert!(cpu.status & 0b1000_0000 == 0);
+    }
+
+    #[test]
+    fn test_0xe0_cpx_equal() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0x42;
+        cpu.interpret(vec![0xe0, 0x42, 0x00]);
+        assert!(cpu.status & 0b0000_0010 != 0);
+        assert!(cpu.status & 0b0000_0001 != 0);
+        assert!(cpu.status & 0b1000_0000 == 0);
+    }
+
+    #[test]
+    fn test_0xe0_cpx_less_than() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0x10;
+        cpu.interpret(vec![0xe0, 0x20, 0x00]);
+        assert!(cpu.status & 0b0000_0010 == 0);
+        assert!(cpu.status & 0b0000_0001 == 0);
+        assert!(cpu.status & 0b1000_0000 != 0);
+    }
+
+    #[test]
+    fn test_0xe0_cpx_greater_than() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0x30;
+        cpu.interpret(vec![0xe0, 0x10, 0x00]);
         assert!(cpu.status & 0b0000_0010 == 0);
         assert!(cpu.status & 0b0000_0001 != 0);
         assert!(cpu.status & 0b1000_0000 == 0);
