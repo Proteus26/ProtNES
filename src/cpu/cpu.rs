@@ -54,6 +54,16 @@ impl CPU {
         }
     }
 
+    fn ldx(&mut self, value: u8) {
+        self.register_x = value;
+        self.update_zero_and_negative_flags(self.register_x);
+    }
+
+    fn ldy(&mut self, value: u8) {
+        self.register_y = value;
+        self.update_zero_and_negative_flags(self.register_y);
+    }
+
     fn update_zero_and_negative_flags(&mut self, result: u8) {
         if result == 0 {
             self.status |= 0b0000_0010;
@@ -98,7 +108,19 @@ impl CPU {
                     self.cpx(param);
                 }
 
-                //0xA2 - LDX
+                0xA2 => {
+                    let param = program[self.program_counter as usize];
+                    self.program_counter += 1;
+                    self.ldx(param);
+                }
+
+                0xA0 => {
+                    let param = program[self.program_counter as usize];
+                    self.program_counter += 1;
+                    self.ldy(param);
+                }
+
+                //0x8A TXA
                 0x00 => return,
 
                 _ => panic!("Unknown opcode: {:#X}", opcode),
@@ -214,5 +236,55 @@ mod test {
         assert!(cpu.status & 0b0000_0010 == 0);
         assert!(cpu.status & 0b0000_0001 != 0);
         assert!(cpu.status & 0b1000_0000 == 0);
+    }
+
+    #[test]
+    fn test_0xa2_ldx_immediate() {
+        let mut cpu = CPU::new();
+        cpu.interpret(vec![0xa2, 0x0F, 0x00]);
+        assert_eq!(cpu.register_x, 0x0F);
+        assert!(cpu.status & 0b0000_0010 == 0);
+        assert!(cpu.status & 0b1000_0000 == 0);
+    }
+
+    #[test]
+    fn test_0xa2_ldx_zero_flag() {
+        let mut cpu = CPU::new();
+        cpu.interpret(vec![0xa2, 0x00, 0x00]);
+        assert_eq!(cpu.register_x, 0x00);
+        assert!(cpu.status & 0b0000_0010 != 0);
+    }
+
+    #[test]
+    fn test_0xa2_ldx_negative_flag() {
+        let mut cpu = CPU::new();
+        cpu.interpret(vec![0xa2, 0xFF, 0x00]);
+        assert_eq!(cpu.register_x, 0xFF);
+        assert!(cpu.status & 0b1000_0000 != 0);
+    }
+
+    #[test]
+    fn test_0xa0_ldy_immediate() {
+        let mut cpu = CPU::new();
+        cpu.interpret(vec![0xa0, 0x42, 0x00]);
+        assert_eq!(cpu.register_y, 0x42);
+        assert!(cpu.status & 0b0000_0010 == 0);
+        assert!(cpu.status & 0b1000_0000 == 0);
+    }
+
+    #[test]
+    fn test_0xa0_ldy_zero_flag() {
+        let mut cpu = CPU::new();
+        cpu.interpret(vec![0xa0, 0x00, 0x00]);
+        assert_eq!(cpu.register_y, 0x00);
+        assert!(cpu.status & 0b0000_0010 != 0);
+    }
+
+    #[test]
+    fn test_0xa0_ldy_negative_flag() {
+        let mut cpu = CPU::new();
+        cpu.interpret(vec![0xa0, 0x80, 0x00]);
+        assert_eq!(cpu.register_y, 0x80);
+        assert!(cpu.status & 0b1000_0000 != 0);
     }
 }
