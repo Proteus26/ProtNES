@@ -164,6 +164,7 @@ impl CPU {
 
                 0x00 => return,
 
+                //NOP #imm, 0x80
                 _ => panic!("Unknown opcode: {:#X}", opcode),
             }
         }
