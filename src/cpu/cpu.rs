@@ -64,6 +64,36 @@ impl CPU {
         self.update_zero_and_negative_flags(self.register_y);
     }
 
+    fn iny(&mut self) {
+        self.register_y = self.register_y.wrapping_add(1);
+        self.update_zero_and_negative_flags(self.register_y);
+    }
+
+    fn tya(&mut self) {
+        self.register_a = self.register_y;
+        self.update_zero_and_negative_flags(self.register_a);
+    }
+
+    fn txa(&mut self) {
+        self.register_a = self.register_x;
+        self.update_zero_and_negative_flags(self.register_a);
+    }
+
+    fn dex(&mut self) {
+        self.register_x = self.register_x.wrapping_sub(1);
+        self.update_zero_and_negative_flags(self.register_x);
+    }
+
+    fn tay(&mut self) {
+        self.register_y = self.register_a;
+        self.update_zero_and_negative_flags(self.register_y);
+    }
+
+    fn dey(&mut self) {
+        self.register_y = self.register_y.wrapping_sub(1);
+        self.update_zero_and_negative_flags(self.register_y);
+    }
+
     fn update_zero_and_negative_flags(&mut self, result: u8) {
         if result == 0 {
             self.status |= 0b0000_0010;
@@ -120,7 +150,18 @@ impl CPU {
                     self.ldy(param);
                 }
 
-                //0x8A TXA
+                0xC8 => self.iny(),
+
+                0x98 => self.tya(),
+
+                0x8A => self.txa(),
+
+                0xCA => self.dex(),
+
+                0xA8 => self.tay(),
+
+                0x88 => self.dey(),
+
                 0x00 => return,
 
                 _ => panic!("Unknown opcode: {:#X}", opcode),
@@ -286,5 +327,230 @@ mod test {
         cpu.interpret(vec![0xa0, 0x80, 0x00]);
         assert_eq!(cpu.register_y, 0x80);
         assert!(cpu.status & 0b1000_0000 != 0);
+    }
+
+    #[test]
+    fn test_iny_basic_increment() {
+        let mut cpu = CPU::new();
+        cpu.register_y = 0x10;
+
+        cpu.iny();
+
+        assert_eq!(cpu.register_y, 0x11);
+        assert!(!cpu.status.zero());
+        assert!(!cpu.status.negative());
+    }
+
+    #[test]
+    fn test_iny_overflow_wraps_to_zero() {
+        let mut cpu = CPU::new();
+        cpu.register_y = 0xFF;
+
+        cpu.iny();
+
+        assert_eq!(cpu.register_y, 0x00);
+        assert!(cpu.status.zero()); // 0x00 sets Zero flag
+        assert!(!cpu.status.negative()); // Bit 7 not set
+    }
+
+    #[test]
+    fn test_iny_sets_negative_flag() {
+        let mut cpu = CPU::new();
+        cpu.register_y = 0x7F; // 127 → 128
+
+        cpu.iny();
+
+        assert_eq!(cpu.register_y, 0x80);
+        assert!(!cpu.status.zero());
+        assert!(cpu.status.negative()); // Bit 7 set
+    }
+
+    #[test]
+    fn test_tya_transfer() {
+        let mut cpu = CPU::new();
+        cpu.register_y = 0x42;
+        cpu.register_a = 0x00;
+
+        cpu.tya();
+
+        assert_eq!(cpu.register_a, 0x42);
+        assert!(!cpu.status.zero()); // Not zero
+        assert!(!cpu.status.negative()); // Bit 7 not set
+    }
+
+    #[test]
+    fn test_tya_sets_zero_flag() {
+        let mut cpu = CPU::new();
+        cpu.register_y = 0x00;
+        cpu.register_a = 0xFF;
+
+        cpu.tya();
+
+        assert_eq!(cpu.register_a, 0x00);
+        assert!(cpu.status.zero()); // Should be set
+        assert!(!cpu.status.negative()); // Should not be set
+    }
+
+    #[test]
+    fn test_tya_sets_negative_flag() {
+        let mut cpu = CPU::new();
+        cpu.register_y = 0x80; // Negative (bit 7 set)
+        cpu.register_a = 0x00;
+
+        cpu.tya();
+
+        assert_eq!(cpu.register_a, 0x80);
+        assert!(!cpu.status.zero()); // Should not be set
+        assert!(cpu.status.negative()); // Should be set
+    }
+
+    #[test]
+    fn test_txa_transfer() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0x42;
+        cpu.register_a = 0x00;
+
+        cpu.txa();
+
+        assert_eq!(cpu.register_a, 0x42);
+        assert!(!cpu.status.zero());
+        assert!(!cpu.status.negative());
+    }
+
+    #[test]
+    fn test_txa_sets_zero_flag() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0x00;
+        cpu.register_a = 0xFF;
+
+        cpu.txa();
+
+        assert_eq!(cpu.register_a, 0x00);
+        assert!(cpu.status.zero());
+        assert!(!cpu.status.negative());
+    }
+
+    #[test]
+    fn test_txa_sets_negative_flag() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0x80;
+        cpu.register_a = 0x00;
+
+        cpu.txa();
+
+        assert_eq!(cpu.register_a, 0x80);
+        assert!(!cpu.status.zero());
+        assert!(cpu.status.negative());
+    }
+
+    #[test]
+    fn test_dex_basic_decrement() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0x10;
+
+        cpu.dex();
+
+        assert_eq!(cpu.register_x, 0x0F);
+        assert!(!cpu.status.zero());
+        assert!(!cpu.status.negative());
+    }
+
+    #[test]
+    fn test_dex_underflow_wraps_to_ff() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0x00;
+
+        cpu.dex();
+
+        assert_eq!(cpu.register_x, 0xFF);
+        assert!(!cpu.status.zero());
+        assert!(cpu.status.negative());
+    }
+
+    #[test]
+    fn test_dex_sets_zero_flag() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0x01;
+
+        cpu.dex();
+
+        assert_eq!(cpu.register_x, 0x00);
+        assert!(cpu.status.zero());
+        assert!(!cpu.status.negative());
+    }
+
+    #[test]
+    fn test_tay_transfer() {
+        let mut cpu = CPU::new();
+        cpu.register_a = 0x37;
+        cpu.register_y = 0x00;
+
+        cpu.tay();
+
+        assert_eq!(cpu.register_y, 0x37);
+        assert!(!cpu.status.zero());
+        assert!(!cpu.status.negative());
+    }
+
+    #[test]
+    fn test_tay_sets_zero_flag() {
+        let mut cpu = CPU::new();
+        cpu.register_a = 0x00;
+        cpu.register_y = 0xFF;
+
+        cpu.tay();
+
+        assert_eq!(cpu.register_y, 0x00);
+        assert!(cpu.status.zero());
+        assert!(!cpu.status.negative());
+    }
+
+    #[test]
+    fn test_tay_sets_negative_flag() {
+        let mut cpu = CPU::new();
+        cpu.register_a = 0x80;
+        cpu.register_y = 0x00;
+
+        cpu.tay();
+
+        assert_eq!(cpu.register_y, 0x80);
+        assert!(!cpu.status.zero());
+        assert!(cpu.status.negative());
+    }
+
+    #[test]
+    fn test_dey_basic_decrement() {
+        let mut cpu = CPU::new();
+        cpu.register_y = 0x10;
+
+        cpu.dey();
+
+        assert_eq!(cpu.register_y, 0x0F);
+        assert!(!cpu.status.zero());
+        assert!(!cpu.status.negative());
+    }
+
+    #[test]
+    fn test_dey_wraps_to_ff() {
+        let mut cpu = CPU::new();
+        cpu.register_y = 0x00;
+
+        cpu.dey();
+
+        assert_eq!(cpu.register_y, 0xFF);
+        assert!(!cpu.status.zero());
+        assert!(cpu.status.negative());
+    }
+
+    #[test]
+    fn test_dey_sets_zero_flag() {
+        let mut cpu = CPU::new();
+        cpu.register_y = 0x01;
+
+        cpu.dey();
+
+        assert_eq!(cpu.register_y, 0x00);
+        assert!(cpu.status.zero());
+        assert!(!cpu.status.negative());
     }
 }
