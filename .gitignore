@@ -1,4 +1,5 @@
 build/
 protnes
+protnes_tests
 *.o
 *.out
