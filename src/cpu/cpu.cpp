@@ -1,25 +1,41 @@
 #include "cpu/cpu.hpp"
+#include "bus/bus.hpp"
+#include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
-CPU::CPU()
+CPU::CPU(Bus &bus)
     : register_a(0), register_x(0), register_y(0), status(0),
-      program_counter(0) {}
+      program_counter(0), bus(bus) {}
 
-void CPU::interpret(const std::vector<uint8_t> &program) {
-  program_counter = 0;
+void CPU::reset() {
+  register_a = 0;
+  register_x = 0;
+  register_y = 0;
+  status = 0;
+  program_counter = bus.read_u16(0xFFFC);
+}
 
+void CPU::load(const std::vector<uint8_t> &program) {
+  bus.load_program(program);
+}
+
+void CPU::load_and_run(const std::vector<uint8_t> &program) {
+  load(program);
+  reset();
+  run();
+}
+
+void CPU::run() {
   while (true) {
-    if (program_counter >= program.size()) {
-      break;
-    }
 
-    uint8_t opcode = program.at(program_counter);
+    uint8_t opcode = bus.read_u8(program_counter);
     program_counter++;
 
     switch (opcode) {
     case 0xA9: {
-      uint8_t param = program.at(program_counter);
+      uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       lda(param);
       break;
@@ -39,7 +55,7 @@ void CPU::interpret(const std::vector<uint8_t> &program) {
     case 0xB1: // LDA (Indirect),Y
       break;
     case 0xA2: {
-      uint8_t param = program.at(program_counter);
+      uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       ldx(param);
       break;
@@ -53,7 +69,7 @@ void CPU::interpret(const std::vector<uint8_t> &program) {
     case 0xBE: // LDX Absolute,Y
       break;
     case 0xA0: {
-      uint8_t param = program.at(program_counter);
+      uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       ldy(param);
       break;
@@ -123,7 +139,7 @@ void CPU::interpret(const std::vector<uint8_t> &program) {
       plp();
       break;
     case 0x69: {
-      uint8_t param = program.at(program_counter);
+      uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       adc(param);
       break;
@@ -143,7 +159,7 @@ void CPU::interpret(const std::vector<uint8_t> &program) {
     case 0x71: // ADC (Indirect),Y
       break;
     case 0xE9: {
-      uint8_t param = program.at(program_counter);
+      uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       sbc(param);
       break;
@@ -280,7 +296,7 @@ void CPU::interpret(const std::vector<uint8_t> &program) {
       sei();
       break;
     case 0x29: {
-      uint8_t param = program.at(program_counter);
+      uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       and_op(param);
       break;
@@ -300,7 +316,7 @@ void CPU::interpret(const std::vector<uint8_t> &program) {
     case 0x31: // AND (Indirect),Y
       break;
     case 0x49: {
-      uint8_t param = program.at(program_counter);
+      uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       eor(param);
       break;
@@ -320,7 +336,7 @@ void CPU::interpret(const std::vector<uint8_t> &program) {
     case 0x51: // EOR (Indirect),Y
       break;
     case 0x09: {
-      uint8_t param = program.at(program_counter);
+      uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       ora(param);
       break;
@@ -340,7 +356,7 @@ void CPU::interpret(const std::vector<uint8_t> &program) {
     case 0x11: // ORA (Indirect),Y
       break;
     case 0xC9: {
-      uint8_t param = program.at(program_counter);
+      uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       cmp(param);
       break;
@@ -360,7 +376,7 @@ void CPU::interpret(const std::vector<uint8_t> &program) {
     case 0xD1: // CMP (Indirect),Y
       break;
     case 0xE0: {
-      uint8_t param = program.at(program_counter);
+      uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       cpx(param);
       break;
@@ -370,7 +386,7 @@ void CPU::interpret(const std::vector<uint8_t> &program) {
     case 0xEC: // CPX Absolute
       break;
     case 0xC0: {
-      uint8_t param = program.at(program_counter);
+      uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       cpy(param);
       break;

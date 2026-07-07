@@ -1,6 +1,7 @@
 #ifndef CPU_HPP
 #define CPU_HPP
 
+#include "bus/bus.hpp"
 #include <cstdint>
 #include <vector>
 
@@ -10,10 +11,16 @@ struct CPU {
   uint8_t register_y;
   uint8_t status;
   uint16_t program_counter;
+  Bus &bus;
 
-  CPU();
+  explicit CPU(Bus &bus);
 
-  void interpret(const std::vector<uint8_t> &program);
+  void load(const std::vector<uint8_t> &program);
+  void load_and_run(const std::vector<uint8_t> &program);
+
+  void reset();
+
+  void run();
 
   void lda(uint8_t value);
   void ldx(uint8_t value);
