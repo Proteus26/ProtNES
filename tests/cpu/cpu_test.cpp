@@ -1,145 +1,181 @@
+#include "bus/bus.hpp"
 #include "cpu/cpu.hpp"
 #include <gtest/gtest.h>
 
 TEST(CpuTest, Lda0xA9ImmediateLoadData) {
-  CPU cpu;
-  cpu.interpret({0xa9, 0x05, 0x00});
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load_and_run({0xa9, 0x05, 0x00});
   EXPECT_EQ(cpu.register_a, 5);
   EXPECT_TRUE((cpu.status & 0b0000'0010) == 0);
   EXPECT_TRUE((cpu.status & 0b1000'0000) == 0);
 }
 
 TEST(CpuTest, Lda0xA9ZeroFlag) {
-  CPU cpu;
-  cpu.interpret({0xa9, 0x00, 0x00});
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load_and_run({0xa9, 0x00, 0x00});
   EXPECT_TRUE((cpu.status & 0b0000'0010) == 0b10);
 }
 
 TEST(CpuTest, Lda0xA9NegativeFlag) {
-  CPU cpu;
-  cpu.interpret({0xa9, 0xff, 0x00});
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load_and_run({0xa9, 0xff, 0x00});
   EXPECT_TRUE((cpu.status & 0b1000'0000) == 0b1000'0000);
 }
 
 TEST(CpuTest, Tax0xAAMoveAToX) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xaa, 0x00});
+  cpu.reset();
   cpu.register_a = 10;
-  cpu.interpret({0xaa, 0x00});
+  cpu.run();
   EXPECT_EQ(cpu.register_x, 10);
 }
 
 TEST(CpuTest, Test5OpsWorkingTogether) {
-  CPU cpu;
-  cpu.interpret({0xa9, 0xc0, 0xaa, 0xe8, 0x00});
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load_and_run({0xa9, 0xc0, 0xaa, 0xe8, 0x00});
   EXPECT_EQ(cpu.register_x, 0xc1);
 }
 
 TEST(CpuTest, InxOverflow) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xe8, 0xe8, 0x00});
+  cpu.reset();
   cpu.register_x = 0xff;
-  cpu.interpret({0xe8, 0xe8, 0x00});
+  cpu.run();
   EXPECT_EQ(cpu.register_x, 1);
 }
 
 TEST(CpuTest, Cpy0xC0Equal) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xc0, 0x10, 0x00});
+  cpu.reset();
   cpu.register_y = 0x10;
-  cpu.interpret({0xc0, 0x10, 0x00});
+  cpu.run();
   EXPECT_TRUE((cpu.status & 0b0000'0010) != 0);
   EXPECT_TRUE((cpu.status & 0b0000'0001) != 0);
 }
 
 TEST(CpuTest, Cpy0xC0LessThan) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xc0, 0x10, 0x00});
+  cpu.reset();
   cpu.register_y = 0x05;
-  cpu.interpret({0xc0, 0x10, 0x00});
+  cpu.run();
   EXPECT_TRUE((cpu.status & 0b0000'0010) == 0);
   EXPECT_TRUE((cpu.status & 0b0000'0001) == 0);
   EXPECT_TRUE((cpu.status & 0b1000'0000) != 0);
 }
 
 TEST(CpuTest, Cpy0xC0GreaterThan) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xc0, 0x10, 0x00});
+  cpu.reset();
   cpu.register_y = 0x20;
-  cpu.interpret({0xc0, 0x10, 0x00});
+  cpu.run();
   EXPECT_TRUE((cpu.status & 0b0000'0010) == 0);
   EXPECT_TRUE((cpu.status & 0b0000'0001) != 0);
   EXPECT_TRUE((cpu.status & 0b1000'0000) == 0);
 }
 
 TEST(CpuTest, Cpx0xE0Equal) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xe0, 0x42, 0x00});
+  cpu.reset();
   cpu.register_x = 0x42;
-  cpu.interpret({0xe0, 0x42, 0x00});
+  cpu.run();
   EXPECT_TRUE((cpu.status & 0b0000'0010) != 0);
   EXPECT_TRUE((cpu.status & 0b0000'0001) != 0);
   EXPECT_TRUE((cpu.status & 0b1000'0000) == 0);
 }
 
 TEST(CpuTest, Cpx0xE0LessThan) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xe0, 0x20, 0x00});
+  cpu.reset();
   cpu.register_x = 0x10;
-  cpu.interpret({0xe0, 0x20, 0x00});
+  cpu.run();
   EXPECT_TRUE((cpu.status & 0b0000'0010) == 0);
   EXPECT_TRUE((cpu.status & 0b0000'0001) == 0);
   EXPECT_TRUE((cpu.status & 0b1000'0000) != 0);
 }
 
 TEST(CpuTest, Cpx0xE0GreaterThan) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xe0, 0x10, 0x00});
+  cpu.reset();
   cpu.register_x = 0x30;
-  cpu.interpret({0xe0, 0x10, 0x00});
+  cpu.run();
   EXPECT_TRUE((cpu.status & 0b0000'0010) == 0);
   EXPECT_TRUE((cpu.status & 0b0000'0001) != 0);
   EXPECT_TRUE((cpu.status & 0b1000'0000) == 0);
 }
 
 TEST(CpuTest, Ldx0xA2Immediate) {
-  CPU cpu;
-  cpu.interpret({0xa2, 0x0F, 0x00});
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load_and_run({0xa2, 0x0F, 0x00});
   EXPECT_EQ(cpu.register_x, 0x0F);
   EXPECT_TRUE((cpu.status & 0b0000'0010) == 0);
   EXPECT_TRUE((cpu.status & 0b1000'0000) == 0);
 }
 
 TEST(CpuTest, Ldx0xA2ZeroFlag) {
-  CPU cpu;
-  cpu.interpret({0xa2, 0x00, 0x00});
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load_and_run({0xa2, 0x00, 0x00});
   EXPECT_EQ(cpu.register_x, 0x00);
   EXPECT_TRUE((cpu.status & 0b0000'0010) != 0);
 }
 
 TEST(CpuTest, Ldx0xA2NegativeFlag) {
-  CPU cpu;
-  cpu.interpret({0xa2, 0xFF, 0x00});
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load_and_run({0xa2, 0xFF, 0x00});
   EXPECT_EQ(cpu.register_x, 0xFF);
   EXPECT_TRUE((cpu.status & 0b1000'0000) != 0);
 }
 
 TEST(CpuTest, Ldy0xA0Immediate) {
-  CPU cpu;
-  cpu.interpret({0xa0, 0x42, 0x00});
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load_and_run({0xa0, 0x42, 0x00});
   EXPECT_EQ(cpu.register_y, 0x42);
   EXPECT_TRUE((cpu.status & 0b0000'0010) == 0);
   EXPECT_TRUE((cpu.status & 0b1000'0000) == 0);
 }
 
 TEST(CpuTest, Ldy0xA0ZeroFlag) {
-  CPU cpu;
-  cpu.interpret({0xa0, 0x00, 0x00});
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load_and_run({0xa0, 0x00, 0x00});
   EXPECT_EQ(cpu.register_y, 0x00);
   EXPECT_TRUE((cpu.status & 0b0000'0010) != 0);
 }
 
 TEST(CpuTest, Ldy0xA0NegativeFlag) {
-  CPU cpu;
-  cpu.interpret({0xa0, 0x80, 0x00});
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load_and_run({0xa0, 0x80, 0x00});
   EXPECT_EQ(cpu.register_y, 0x80);
   EXPECT_TRUE((cpu.status & 0b1000'0000) != 0);
 }
 
 TEST(CpuTest, InyBasicIncrement) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_y = 0x10;
   cpu.iny();
   EXPECT_EQ(cpu.register_y, 0x11);
@@ -148,7 +184,8 @@ TEST(CpuTest, InyBasicIncrement) {
 }
 
 TEST(CpuTest, InyOverflowWrapsToZero) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_y = 0xFF;
   cpu.iny();
   EXPECT_EQ(cpu.register_y, 0x00);
@@ -157,7 +194,8 @@ TEST(CpuTest, InyOverflowWrapsToZero) {
 }
 
 TEST(CpuTest, InySetsNegativeFlag) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_y = 0x7F;
   cpu.iny();
   EXPECT_EQ(cpu.register_y, 0x80);
@@ -166,7 +204,8 @@ TEST(CpuTest, InySetsNegativeFlag) {
 }
 
 TEST(CpuTest, TyaTransfer) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_y = 0x42;
   cpu.register_a = 0x00;
   cpu.tya();
@@ -176,7 +215,8 @@ TEST(CpuTest, TyaTransfer) {
 }
 
 TEST(CpuTest, TyaSetsZeroFlag) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_y = 0x00;
   cpu.register_a = 0xFF;
   cpu.tya();
@@ -186,7 +226,8 @@ TEST(CpuTest, TyaSetsZeroFlag) {
 }
 
 TEST(CpuTest, TyaSetsNegativeFlag) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_y = 0x80;
   cpu.register_a = 0x00;
   cpu.tya();
@@ -196,7 +237,8 @@ TEST(CpuTest, TyaSetsNegativeFlag) {
 }
 
 TEST(CpuTest, TxaTransfer) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_x = 0x42;
   cpu.register_a = 0x00;
   cpu.txa();
@@ -206,7 +248,8 @@ TEST(CpuTest, TxaTransfer) {
 }
 
 TEST(CpuTest, TxaSetsZeroFlag) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_x = 0x00;
   cpu.register_a = 0xFF;
   cpu.txa();
@@ -216,7 +259,8 @@ TEST(CpuTest, TxaSetsZeroFlag) {
 }
 
 TEST(CpuTest, TxaSetsNegativeFlag) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_x = 0x80;
   cpu.register_a = 0x00;
   cpu.txa();
@@ -226,7 +270,8 @@ TEST(CpuTest, TxaSetsNegativeFlag) {
 }
 
 TEST(CpuTest, DexBasicDecrement) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_x = 0x10;
   cpu.dex();
   EXPECT_EQ(cpu.register_x, 0x0F);
@@ -235,7 +280,8 @@ TEST(CpuTest, DexBasicDecrement) {
 }
 
 TEST(CpuTest, DexUnderflowWrapsToFf) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_x = 0x00;
   cpu.dex();
   EXPECT_EQ(cpu.register_x, 0xFF);
@@ -244,7 +290,8 @@ TEST(CpuTest, DexUnderflowWrapsToFf) {
 }
 
 TEST(CpuTest, DexSetsZeroFlag) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_x = 0x01;
   cpu.dex();
   EXPECT_EQ(cpu.register_x, 0x00);
@@ -253,7 +300,8 @@ TEST(CpuTest, DexSetsZeroFlag) {
 }
 
 TEST(CpuTest, TayTransfer) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_a = 0x37;
   cpu.register_y = 0x00;
   cpu.tay();
@@ -263,7 +311,8 @@ TEST(CpuTest, TayTransfer) {
 }
 
 TEST(CpuTest, TaySetsZeroFlag) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_a = 0x00;
   cpu.register_y = 0xFF;
   cpu.tay();
@@ -273,7 +322,8 @@ TEST(CpuTest, TaySetsZeroFlag) {
 }
 
 TEST(CpuTest, TaySetsNegativeFlag) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_a = 0x80;
   cpu.register_y = 0x00;
   cpu.tay();
@@ -283,7 +333,8 @@ TEST(CpuTest, TaySetsNegativeFlag) {
 }
 
 TEST(CpuTest, DeyBasicDecrement) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_y = 0x10;
   cpu.dey();
   EXPECT_EQ(cpu.register_y, 0x0F);
@@ -292,7 +343,8 @@ TEST(CpuTest, DeyBasicDecrement) {
 }
 
 TEST(CpuTest, DeyWrapsToFf) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_y = 0x00;
   cpu.dey();
   EXPECT_EQ(cpu.register_y, 0xFF);
@@ -301,7 +353,8 @@ TEST(CpuTest, DeyWrapsToFf) {
 }
 
 TEST(CpuTest, DeySetsZeroFlag) {
-  CPU cpu;
+  Bus bus;
+  CPU cpu(bus);
   cpu.register_y = 0x01;
   cpu.dey();
   EXPECT_EQ(cpu.register_y, 0x00);
