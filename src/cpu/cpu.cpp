@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <sys/types.h>
 #include <vector>
 
 CPU::CPU(Bus &bus)
@@ -25,6 +26,59 @@ void CPU::load_and_run(const std::vector<uint8_t> &program) {
   load(program);
   reset();
   run();
+}
+
+uint16_t CPU::get_operand_address(AddressingMode mode) const {
+  switch (mode) {
+  case AddressingMode::Immediate:
+    return program_counter;
+
+  case AddressingMode::Zeropage:
+    return bus.read_u8(program_counter);
+
+  case AddressingMode::Zeropage_X: {
+    uint8_t pos = bus.read_u8(program_counter);
+    return static_cast<uint8_t>(pos + register_x);
+  }
+
+  case AddressingMode::Zeropage_Y: {
+    uint8_t pos = bus.read_u8(program_counter);
+    return static_cast<uint8_t>(pos + register_y);
+  }
+
+  case AddressingMode::Absolute:
+    return bus.read_u16(program_counter);
+
+  case AddressingMode::Absolute_X: {
+    uint16_t base = bus.read_u16(program_counter);
+    return static_cast<uint16_t>(base + register_x);
+  }
+
+  case AddressingMode::Absolute_Y: {
+    uint16_t base = bus.read_u16(program_counter);
+    return static_cast<uint16_t>(base + register_y);
+  }
+
+  case AddressingMode::Indirect_X: {
+    uint8_t base = bus.read_u8(program_counter);
+    uint8_t ptr = static_cast<uint8_t>(base + register_x);
+    uint8_t lo = bus.read_u8(ptr);
+    uint8_t hi = bus.read_u8(static_cast<uint8_t>(ptr + 1));
+    return static_cast<uint16_t>(lo | (hi << 8));
+  }
+
+  case AddressingMode::Indirect_Y: {
+    uint8_t base = bus.read_u8(program_counter);
+    uint8_t lo = bus.read_u8(base);
+    uint8_t hi = bus.read_u8(static_cast<uint8_t>(base + 1));
+    uint16_t deref_base = static_cast<uint16_t>(lo | (hi << 8));
+    return static_cast<uint16_t>(deref_base + register_y);
+  }
+
+  case AddressingMode::NoneAddressing:
+  default:
+    throw std::runtime_error("AddressingMode not supported for this operation");
+  }
 }
 
 void CPU::run() {

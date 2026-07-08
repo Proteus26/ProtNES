@@ -5,6 +5,19 @@
 #include <cstdint>
 #include <vector>
 
+enum class AddressingMode {
+  Immediate,
+  Zeropage,
+  Zeropage_X,
+  Zeropage_Y,
+  Absolute,
+  Absolute_X,
+  Absolute_Y,
+  Indirect_X,
+  Indirect_Y,
+  NoneAddressing,
+};
+
 struct CPU {
   uint8_t register_a;
   uint8_t register_x;
@@ -21,6 +34,8 @@ struct CPU {
   void reset();
 
   void run();
+
+  uint16_t get_operand_address(AddressingMode mode) const;
 
   void lda(uint8_t value);
   void ldx(uint8_t value);
