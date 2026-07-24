@@ -97,14 +97,14 @@ void CPU::run() {
     }
     case 0xA5: { // LDA Zero Page
       uint8_t param =
-          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
+          bus.read_u8(get_operand_address(AddressingMode::Zeropage));
       program_counter += 1;
       lda(param);
       break;
     }
     case 0xB5: { // LDA Zero Page,X
       uint8_t param =
-          bus.read_u8(get_operand_address(AddressingMode::ZeroPage_X));
+          bus.read_u8(get_operand_address(AddressingMode::Zeropage_X));
       program_counter += 1;
       lda(param);
       break;
@@ -153,14 +153,14 @@ void CPU::run() {
     }
     case 0xA6: { // LDX Zero Page
       uint8_t param =
-          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
+          bus.read_u8(get_operand_address(AddressingMode::Zeropage));
       program_counter += 1;
       ldx(param);
       break;
     }
     case 0xB6: { // LDX Zero Page,Y
       uint8_t param =
-          bus.read_u8(get_operand_address(AddressingMode::ZeroPage_Y));
+          bus.read_u8(get_operand_address(AddressingMode::Zeropage_Y));
       program_counter += 1;
       ldx(param);
       break;
@@ -188,14 +188,14 @@ void CPU::run() {
     }
     case 0xA4: { // LDY Zero Page
       uint8_t param =
-          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
+          bus.read_u8(get_operand_address(AddressingMode::Zeropage));
       program_counter += 1;
       ldy(param);
       break;
     }
     case 0xB4: { // LDY Zero Page,X
       uint8_t param =
-          bus.read_u8(get_operand_address(AddressingMode::ZeroPage_X));
+          bus.read_u8(get_operand_address(AddressingMode::Zeropage_X));
       program_counter += 1;
       ldy(param);
       break;
@@ -215,13 +215,13 @@ void CPU::run() {
       break;
     }
     case 0x85: { // STA Zero Page
-      uint16_t addr = get_operand_address(AddressingMode::ZeroPage);
+      uint16_t addr = get_operand_address(AddressingMode::Zeropage);
       bus.write_u8(addr, register_a);
       program_counter += 1;
       break;
     }
     case 0x95: { // STA Zero Page,X
-      uint16_t addr = get_operand_address(AddressingMode::ZeroPage_X);
+      uint16_t addr = get_operand_address(AddressingMode::Zeropage_X);
       bus.write_u8(addr, register_a);
       program_counter += 1;
       break;
@@ -257,13 +257,13 @@ void CPU::run() {
       break;
     }
     case 0x86: { // STX Zero Page
-      uint16_t addr = get_operand_address(AddressingMode::ZeroPage);
+      uint16_t addr = get_operand_address(AddressingMode::Zeropage);
       bus.write_u8(addr, register_x);
       program_counter += 1;
       break;
     }
     case 0x96: { // STX Zero Page,Y
-      uint16_t addr = get_operand_address(AddressingMode::ZeroPage_Y);
+      uint16_t addr = get_operand_address(AddressingMode::Zeropage_Y);
       bus.write_u8(addr, register_x);
       program_counter += 1;
       break;
@@ -275,13 +275,13 @@ void CPU::run() {
       break;
     }
     case 0x84: { // STY Zero Page
-      uint16_t addr = get_operand_address(AddressingMode::ZeroPage);
+      uint16_t addr = get_operand_address(AddressingMode::Zeropage);
       bus.write_u8(addr, register_y);
       program_counter += 1;
       break;
     }
     case 0x94: { // STY Zero Page,X
-      uint16_t addr = get_operand_address(AddressingMode::ZeroPage_X);
+      uint16_t addr = get_operand_address(AddressingMode::Zeropage_X);
       bus.write_u8(addr, register_y);
       program_counter += 1;
       break;
