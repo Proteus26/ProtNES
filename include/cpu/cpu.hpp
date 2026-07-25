@@ -3,6 +3,7 @@
 
 #include "bus/bus.hpp"
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 enum class AddressingMode {
@@ -37,7 +38,7 @@ struct CPU {
 
   void reset();
 
-  void run();
+  void run(const std::function<void(CPU &)> &trace_callback = nullptr);
 
   uint16_t get_operand_address(AddressingMode mode) const;
 

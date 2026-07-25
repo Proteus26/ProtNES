@@ -682,3 +682,39 @@ TEST(CpuTest, LoopUsingDexAndBne) {
   cpu.run();
   EXPECT_EQ(cpu.register_x, 0x00);
 }
+
+TEST(CpuTest, BitZeroPageSetsOverflowAndNegativeFromMemory) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0x24, 0x01, 0x00});
+  cpu.reset();
+  cpu.register_a = 0xFF;
+  bus.write_u8(0x01, 0xC0);
+  cpu.run();
+  EXPECT_EQ(cpu.status & 0b1000'0000, 0b1000'0000);
+  EXPECT_EQ(cpu.status & 0b0100'0000, 0b0100'0000);
+  EXPECT_EQ(cpu.status & 0b0000'0010, 0);
+}
+
+TEST(CpuTest, BitZeroPageSetsZeroFlagWhenMaskedResultIsZero) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0x24, 0x01, 0x00});
+  cpu.reset();
+  cpu.register_a = 0x0F;
+  bus.write_u8(0x01, 0xF0);
+  cpu.run();
+  EXPECT_NE(cpu.status & 0b0000'0010, 0);
+}
+
+TEST(CpuTest, BitAbsolute) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0x2c, 0x00, 0x03, 0x00});
+  cpu.reset();
+  cpu.register_a = 0xFF;
+  bus.write_u8(0x0300, 0x40);
+  cpu.run();
+  EXPECT_EQ(cpu.status & 0b1000'0000, 0);
+  EXPECT_EQ(cpu.status & 0b0100'0000, 0b0100'0000);
+}

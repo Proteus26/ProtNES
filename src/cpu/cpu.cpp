@@ -111,8 +111,12 @@ void CPU::branch(bool condition) {
   }
 }
 
-void CPU::run() {
+void CPU::run(const std::function<void(CPU &)> &trace_callback) {
   while (true) {
+    if (trace_callback) {
+      trace_callback(*this);
+    }
+
     uint8_t opcode = bus.read_u8(program_counter);
     program_counter++;
 
@@ -637,10 +641,20 @@ void CPU::run() {
       break;
     case 0xCC: // CPY Absolute
       break;
-    case 0x24: // BIT Zero Page
+    case 0x24: { // BIT Zero Page
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
+      program_counter += 1;
+      bit(param);
       break;
-    case 0x2C: // BIT Absolute
+    }
+    case 0x2C: { // BIT Absolute
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute));
+      program_counter += 2;
+      bit(param);
       break;
+    }
     case 0x00: // BRK
       return;
     case 0xEA: // NOP
