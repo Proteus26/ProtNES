@@ -1,20 +1,19 @@
 #include "cpu/cpu.hpp"
-#include "bus/bus.hpp"
 #include <cstdint>
 #include <stdexcept>
 #include <string>
-#include <sys/types.h>
 #include <vector>
 
 CPU::CPU(Bus &bus)
     : register_a(0), register_x(0), register_y(0), status(0),
-      program_counter(0), bus(bus) {}
+      program_counter(0), stack_pointer(STACK_RESET), bus(bus) {}
 
 void CPU::reset() {
   register_a = 0;
   register_x = 0;
   register_y = 0;
   status = 0;
+  stack_pointer = STACK_RESET;
   program_counter = bus.read_u16(0xFFFC);
 }
 
@@ -33,21 +32,21 @@ uint16_t CPU::get_operand_address(AddressingMode mode) const {
   case AddressingMode::Immediate:
     return program_counter;
 
-  case AddressingMode::Zeropage:
+  case AddressingMode::ZeroPage:
     return bus.read_u8(program_counter);
 
-  case AddressingMode::Zeropage_X: {
+  case AddressingMode::Absolute:
+    return bus.read_u16(program_counter);
+
+  case AddressingMode::ZeroPage_X: {
     uint8_t pos = bus.read_u8(program_counter);
     return static_cast<uint8_t>(pos + register_x);
   }
 
-  case AddressingMode::Zeropage_Y: {
+  case AddressingMode::ZeroPage_Y: {
     uint8_t pos = bus.read_u8(program_counter);
     return static_cast<uint8_t>(pos + register_y);
   }
-
-  case AddressingMode::Absolute:
-    return bus.read_u16(program_counter);
 
   case AddressingMode::Absolute_X: {
     uint16_t base = bus.read_u16(program_counter);
@@ -81,9 +80,39 @@ uint16_t CPU::get_operand_address(AddressingMode mode) const {
   }
 }
 
+void CPU::stack_push(uint8_t value) {
+  bus.write_u8(static_cast<uint16_t>(STACK_BASE + stack_pointer), value);
+  stack_pointer--;
+}
+
+uint8_t CPU::stack_pop() {
+  stack_pointer++;
+  return bus.read_u8(static_cast<uint16_t>(STACK_BASE + stack_pointer));
+}
+
+void CPU::stack_push_u16(uint16_t value) {
+  uint8_t hi = static_cast<uint8_t>(value >> 8);
+  uint8_t lo = static_cast<uint8_t>(value & 0xFF);
+  stack_push(hi);
+  stack_push(lo);
+}
+
+uint16_t CPU::stack_pop_u16() {
+  uint8_t lo = stack_pop();
+  uint8_t hi = stack_pop();
+  return static_cast<uint16_t>(lo | (static_cast<uint16_t>(hi) << 8));
+}
+
+void CPU::branch(bool condition) {
+  int8_t offset = static_cast<int8_t>(bus.read_u8(program_counter));
+  program_counter += 1;
+  if (condition) {
+    program_counter = static_cast<uint16_t>(program_counter + offset);
+  }
+}
+
 void CPU::run() {
   while (true) {
-
     uint8_t opcode = bus.read_u8(program_counter);
     program_counter++;
 
@@ -97,14 +126,14 @@ void CPU::run() {
     }
     case 0xA5: { // LDA Zero Page
       uint8_t param =
-          bus.read_u8(get_operand_address(AddressingMode::Zeropage));
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
       program_counter += 1;
       lda(param);
       break;
     }
     case 0xB5: { // LDA Zero Page,X
       uint8_t param =
-          bus.read_u8(get_operand_address(AddressingMode::Zeropage_X));
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage_X));
       program_counter += 1;
       lda(param);
       break;
@@ -153,14 +182,14 @@ void CPU::run() {
     }
     case 0xA6: { // LDX Zero Page
       uint8_t param =
-          bus.read_u8(get_operand_address(AddressingMode::Zeropage));
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
       program_counter += 1;
       ldx(param);
       break;
     }
     case 0xB6: { // LDX Zero Page,Y
       uint8_t param =
-          bus.read_u8(get_operand_address(AddressingMode::Zeropage_Y));
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage_Y));
       program_counter += 1;
       ldx(param);
       break;
@@ -188,14 +217,14 @@ void CPU::run() {
     }
     case 0xA4: { // LDY Zero Page
       uint8_t param =
-          bus.read_u8(get_operand_address(AddressingMode::Zeropage));
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
       program_counter += 1;
       ldy(param);
       break;
     }
     case 0xB4: { // LDY Zero Page,X
       uint8_t param =
-          bus.read_u8(get_operand_address(AddressingMode::Zeropage_X));
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage_X));
       program_counter += 1;
       ldy(param);
       break;
@@ -215,13 +244,13 @@ void CPU::run() {
       break;
     }
     case 0x85: { // STA Zero Page
-      uint16_t addr = get_operand_address(AddressingMode::Zeropage);
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage);
       bus.write_u8(addr, register_a);
       program_counter += 1;
       break;
     }
     case 0x95: { // STA Zero Page,X
-      uint16_t addr = get_operand_address(AddressingMode::Zeropage_X);
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage_X);
       bus.write_u8(addr, register_a);
       program_counter += 1;
       break;
@@ -257,13 +286,13 @@ void CPU::run() {
       break;
     }
     case 0x86: { // STX Zero Page
-      uint16_t addr = get_operand_address(AddressingMode::Zeropage);
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage);
       bus.write_u8(addr, register_x);
       program_counter += 1;
       break;
     }
     case 0x96: { // STX Zero Page,Y
-      uint16_t addr = get_operand_address(AddressingMode::Zeropage_Y);
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage_Y);
       bus.write_u8(addr, register_x);
       program_counter += 1;
       break;
@@ -275,13 +304,13 @@ void CPU::run() {
       break;
     }
     case 0x84: { // STY Zero Page
-      uint16_t addr = get_operand_address(AddressingMode::Zeropage);
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage);
       bus.write_u8(addr, register_y);
       program_counter += 1;
       break;
     }
     case 0x94: { // STY Zero Page,X
-      uint16_t addr = get_operand_address(AddressingMode::Zeropage_X);
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage_X);
       bus.write_u8(addr, register_y);
       program_counter += 1;
       break;
@@ -292,34 +321,34 @@ void CPU::run() {
       program_counter += 2;
       break;
     }
-    case 0xAA: // TAX Implied
+    case 0xAA: // TAX
       tax();
       break;
-    case 0xA8: // TAY Implied
+    case 0xA8: // TAY
       tay();
       break;
-    case 0x8A: // TXA Implied
+    case 0x8A: // TXA
       txa();
       break;
-    case 0x98: // TYA Implied
+    case 0x98: // TYA
       tya();
       break;
-    case 0xBA: // TSX Implied
+    case 0xBA: // TSX
       tsx();
       break;
-    case 0x9A: // TXS Implied
+    case 0x9A: // TXS
       txs();
       break;
-    case 0x48: // PHA Implied
+    case 0x48: // PHA
       pha();
       break;
-    case 0x68: // PLA Implied
+    case 0x68: // PLA
       pla();
       break;
-    case 0x08: // PHP Implied
+    case 0x08: // PHP
       php();
       break;
-    case 0x28: // PLP Implied
+    case 0x28: // PLP
       plp();
       break;
     case 0x69: { // ADC Immediate
@@ -362,16 +391,16 @@ void CPU::run() {
       break;
     case 0xF1: // SBC (Indirect),Y
       break;
-    case 0xE8: // INX Implied
+    case 0xE8: // INX
       inx();
       break;
-    case 0xC8: // INY Implied
+    case 0xC8: // INY
       iny();
       break;
-    case 0xCA: // DEX Implied
+    case 0xCA: // DEX
       dex();
       break;
-    case 0x88: // DEY Implied
+    case 0x88: // DEY
       dey();
       break;
     case 0xE6: // INC Zero Page
@@ -434,49 +463,78 @@ void CPU::run() {
       break;
     case 0x7E: // ROR Absolute,X
       break;
-    case 0x4C: // JMP Absolute
+    case 0x4C: { // JMP Absolute
+      uint16_t addr = bus.read_u16(program_counter);
+      program_counter = addr;
       break;
-    case 0x6C: // JMP Indirect
+    }
+    case 0x6C: { // JMP Indirect
+      uint16_t ptr = bus.read_u16(program_counter);
+      uint16_t target;
+      if ((ptr & 0x00FF) == 0x00FF) {
+        uint8_t lo = bus.read_u8(ptr);
+        uint8_t hi = bus.read_u8(ptr & 0xFF00);
+        target = static_cast<uint16_t>(lo | (hi << 8));
+      } else {
+        target = bus.read_u16(ptr);
+      }
+      program_counter = target;
       break;
-    case 0x20: // JSR Absolute
+    }
+    case 0x20: { // JSR Absolute
+      uint16_t addr = bus.read_u16(program_counter);
+      stack_push_u16(static_cast<uint16_t>(program_counter + 1));
+      program_counter = addr;
       break;
-    case 0x60: // RTS Implied
+    }
+    case 0x60: { // RTS
+      uint16_t addr = stack_pop_u16();
+      program_counter = static_cast<uint16_t>(addr + 1);
       break;
-    case 0x90: // BCC Relative
+    }
+    case 0x90: // BCC
+      branch((status & 0b00000001) == 0);
       break;
-    case 0xB0: // BCS Relative
+    case 0xB0: // BCS
+      branch((status & 0b00000001) != 0);
       break;
-    case 0xF0: // BEQ Relative
+    case 0xF0: // BEQ
+      branch((status & 0b00000010) != 0);
       break;
-    case 0xD0: // BNE Relative
+    case 0xD0: // BNE
+      branch((status & 0b00000010) == 0);
       break;
-    case 0x30: // BMI Relative
+    case 0x30: // BMI
+      branch((status & 0b10000000) != 0);
       break;
-    case 0x10: // BPL Relative
+    case 0x10: // BPL
+      branch((status & 0b10000000) == 0);
       break;
-    case 0x50: // BVC Relative
+    case 0x50: // BVC
+      branch((status & 0b01000000) == 0);
       break;
-    case 0x70: // BVS Relative
+    case 0x70: // BVS
+      branch((status & 0b01000000) != 0);
       break;
-    case 0x18: // CLC Implied
+    case 0x18: // CLC
       clc();
       break;
-    case 0xD8: // CLD Implied
+    case 0xD8: // CLD
       cld();
       break;
-    case 0x58: // CLI Implied
+    case 0x58: // CLI
       cli();
       break;
-    case 0xB8: // CLV Implied
+    case 0xB8: // CLV
       clv();
       break;
-    case 0x38: // SEC Implied
+    case 0x38: // SEC
       sec();
       break;
-    case 0xF8: // SED Implied
+    case 0xF8: // SED
       sed();
       break;
-    case 0x78: // SEI Implied
+    case 0x78: // SEI
       sei();
       break;
     case 0x29: { // AND Immediate
@@ -583,9 +641,9 @@ void CPU::run() {
       break;
     case 0x2C: // BIT Absolute
       break;
-    case 0x00: // BRK Implied
+    case 0x00: // BRK
       return;
-    case 0xEA: // NOP Implied
+    case 0xEA: // NOP
       break;
     default:
       throw std::runtime_error("Unknown opcode: " + std::to_string(opcode));
@@ -629,19 +687,22 @@ void CPU::tya() {
 }
 
 void CPU::tsx() {
-  register_x = status;
+  register_x = stack_pointer;
   update_zero_and_negative_flags(register_x);
 }
 
-void CPU::txs() { status = register_x; }
+void CPU::txs() { stack_pointer = register_x; }
 
-void CPU::pha() {}
+void CPU::pha() { stack_push(register_a); }
 
-void CPU::pla() { update_zero_and_negative_flags(register_a); }
+void CPU::pla() {
+  register_a = stack_pop();
+  update_zero_and_negative_flags(register_a);
+}
 
-void CPU::php() {}
+void CPU::php() { stack_push(status | 0b00110000); }
 
-void CPU::plp() {}
+void CPU::plp() { status = (stack_pop() & 0b11101111) | 0b00100000; }
 
 void CPU::adc(uint8_t value) {
   uint16_t sum = static_cast<uint16_t>(register_a) + value + (status & 1);

@@ -7,9 +7,9 @@
 
 enum class AddressingMode {
   Immediate,
-  Zeropage,
-  Zeropage_X,
-  Zeropage_Y,
+  ZeroPage,
+  ZeroPage_X,
+  ZeroPage_Y,
   Absolute,
   Absolute_X,
   Absolute_Y,
@@ -24,7 +24,11 @@ struct CPU {
   uint8_t register_y;
   uint8_t status;
   uint16_t program_counter;
+  uint8_t stack_pointer;
   Bus &bus;
+
+  static constexpr uint16_t STACK_BASE = 0x0100;
+  static constexpr uint8_t STACK_RESET = 0xFD;
 
   explicit CPU(Bus &bus);
 
@@ -36,6 +40,13 @@ struct CPU {
   void run();
 
   uint16_t get_operand_address(AddressingMode mode) const;
+
+  void stack_push(uint8_t value);
+  uint8_t stack_pop();
+  void stack_push_u16(uint16_t value);
+  uint16_t stack_pop_u16();
+
+  void branch(bool condition);
 
   void lda(uint8_t value);
   void ldx(uint8_t value);
