@@ -76,6 +76,13 @@ struct CPU {
   void rol_accumulator();
   void ror_accumulator();
 
+  void inc(uint16_t addr);
+  void dec(uint16_t addr);
+  void asl(uint16_t addr);
+  void lsr(uint16_t addr);
+  void rol(uint16_t addr);
+  void ror(uint16_t addr);
+
   void clc();
   void cld();
   void cli();

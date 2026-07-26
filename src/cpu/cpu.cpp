@@ -361,40 +361,110 @@ void CPU::run(const std::function<void(CPU &)> &trace_callback) {
       adc(param);
       break;
     }
-    case 0x65: // ADC Zero Page
+    case 0x65: { // ADC Zero Page
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
+      program_counter += 1;
+      adc(param);
       break;
-    case 0x75: // ADC Zero Page,X
+    }
+    case 0x75: { // ADC Zero Page,X
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage_X));
+      program_counter += 1;
+      adc(param);
       break;
-    case 0x6D: // ADC Absolute
+    }
+    case 0x6D: { // ADC Absolute
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute));
+      program_counter += 2;
+      adc(param);
       break;
-    case 0x7D: // ADC Absolute,X
+    }
+    case 0x7D: { // ADC Absolute,X
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute_X));
+      program_counter += 2;
+      adc(param);
       break;
-    case 0x79: // ADC Absolute,Y
+    }
+    case 0x79: { // ADC Absolute,Y
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute_Y));
+      program_counter += 2;
+      adc(param);
       break;
-    case 0x61: // ADC (Indirect,X)
+    }
+    case 0x61: { // ADC (Indirect,X)
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Indirect_X));
+      program_counter += 1;
+      adc(param);
       break;
-    case 0x71: // ADC (Indirect),Y
+    }
+    case 0x71: { // ADC (Indirect),Y
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Indirect_Y));
+      program_counter += 1;
+      adc(param);
       break;
+    }
     case 0xE9: { // SBC Immediate
       uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       sbc(param);
       break;
     }
-    case 0xE5: // SBC Zero Page
+    case 0xE5: { // SBC Zero Page
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
+      program_counter += 1;
+      sbc(param);
       break;
-    case 0xF5: // SBC Zero Page,X
+    }
+    case 0xF5: { // SBC Zero Page,X
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage_X));
+      program_counter += 1;
+      sbc(param);
       break;
-    case 0xED: // SBC Absolute
+    }
+    case 0xED: { // SBC Absolute
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute));
+      program_counter += 2;
+      sbc(param);
       break;
-    case 0xFD: // SBC Absolute,X
+    }
+    case 0xFD: { // SBC Absolute,X
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute_X));
+      program_counter += 2;
+      sbc(param);
       break;
-    case 0xF9: // SBC Absolute,Y
+    }
+    case 0xF9: { // SBC Absolute,Y
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute_Y));
+      program_counter += 2;
+      sbc(param);
       break;
-    case 0xE1: // SBC (Indirect,X)
+    }
+    case 0xE1: { // SBC (Indirect,X)
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Indirect_X));
+      program_counter += 1;
+      sbc(param);
       break;
-    case 0xF1: // SBC (Indirect),Y
+    }
+    case 0xF1: { // SBC (Indirect),Y
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Indirect_Y));
+      program_counter += 1;
+      sbc(param);
       break;
+    }
     case 0xE8: // INX
       inx();
       break;
@@ -407,66 +477,162 @@ void CPU::run(const std::function<void(CPU &)> &trace_callback) {
     case 0x88: // DEY
       dey();
       break;
-    case 0xE6: // INC Zero Page
+    case 0xE6: { // INC Zero Page
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage);
+      inc(addr);
+      program_counter += 1;
       break;
-    case 0xF6: // INC Zero Page,X
+    }
+    case 0xF6: { // INC Zero Page,X
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage_X);
+      inc(addr);
+      program_counter += 1;
       break;
-    case 0xEE: // INC Absolute
+    }
+    case 0xEE: { // INC Absolute
+      uint16_t addr = get_operand_address(AddressingMode::Absolute);
+      inc(addr);
+      program_counter += 2;
       break;
-    case 0xFE: // INC Absolute,X
+    }
+    case 0xFE: { // INC Absolute,X
+      uint16_t addr = get_operand_address(AddressingMode::Absolute_X);
+      inc(addr);
+      program_counter += 2;
       break;
-    case 0xC6: // DEC Zero Page
+    }
+    case 0xC6: { // DEC Zero Page
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage);
+      dec(addr);
+      program_counter += 1;
       break;
-    case 0xD6: // DEC Zero Page,X
+    }
+    case 0xD6: { // DEC Zero Page,X
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage_X);
+      dec(addr);
+      program_counter += 1;
       break;
-    case 0xCE: // DEC Absolute
+    }
+    case 0xCE: { // DEC Absolute
+      uint16_t addr = get_operand_address(AddressingMode::Absolute);
+      dec(addr);
+      program_counter += 2;
       break;
-    case 0xDE: // DEC Absolute,X
+    }
+    case 0xDE: { // DEC Absolute,X
+      uint16_t addr = get_operand_address(AddressingMode::Absolute_X);
+      dec(addr);
+      program_counter += 2;
       break;
+    }
     case 0x0A: // ASL Accumulator
       asl_accumulator();
       break;
-    case 0x06: // ASL Zero Page
+    case 0x06: { // ASL Zero Page
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage);
+      asl(addr);
+      program_counter += 1;
       break;
-    case 0x16: // ASL Zero Page,X
+    }
+    case 0x16: { // ASL Zero Page,X
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage_X);
+      asl(addr);
+      program_counter += 1;
       break;
-    case 0x0E: // ASL Absolute
+    }
+    case 0x0E: { // ASL Absolute
+      uint16_t addr = get_operand_address(AddressingMode::Absolute);
+      asl(addr);
+      program_counter += 2;
       break;
-    case 0x1E: // ASL Absolute,X
+    }
+    case 0x1E: { // ASL Absolute,X
+      uint16_t addr = get_operand_address(AddressingMode::Absolute_X);
+      asl(addr);
+      program_counter += 2;
       break;
+    }
     case 0x4A: // LSR Accumulator
       lsr_accumulator();
       break;
-    case 0x46: // LSR Zero Page
+    case 0x46: { // LSR Zero Page
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage);
+      lsr(addr);
+      program_counter += 1;
       break;
-    case 0x56: // LSR Zero Page,X
+    }
+    case 0x56: { // LSR Zero Page,X
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage_X);
+      lsr(addr);
+      program_counter += 1;
       break;
-    case 0x4E: // LSR Absolute
+    }
+    case 0x4E: { // LSR Absolute
+      uint16_t addr = get_operand_address(AddressingMode::Absolute);
+      lsr(addr);
+      program_counter += 2;
       break;
-    case 0x5E: // LSR Absolute,X
+    }
+    case 0x5E: { // LSR Absolute,X
+      uint16_t addr = get_operand_address(AddressingMode::Absolute_X);
+      lsr(addr);
+      program_counter += 2;
       break;
+    }
     case 0x2A: // ROL Accumulator
       rol_accumulator();
       break;
-    case 0x26: // ROL Zero Page
+    case 0x26: { // ROL Zero Page
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage);
+      rol(addr);
+      program_counter += 1;
       break;
-    case 0x36: // ROL Zero Page,X
+    }
+    case 0x36: { // ROL Zero Page,X
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage_X);
+      rol(addr);
+      program_counter += 1;
       break;
-    case 0x2E: // ROL Absolute
+    }
+    case 0x2E: { // ROL Absolute
+      uint16_t addr = get_operand_address(AddressingMode::Absolute);
+      rol(addr);
+      program_counter += 2;
       break;
-    case 0x3E: // ROL Absolute,X
+    }
+    case 0x3E: { // ROL Absolute,X
+      uint16_t addr = get_operand_address(AddressingMode::Absolute_X);
+      rol(addr);
+      program_counter += 2;
       break;
+    }
     case 0x6A: // ROR Accumulator
       ror_accumulator();
       break;
-    case 0x66: // ROR Zero Page
+    case 0x66: { // ROR Zero Page
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage);
+      ror(addr);
+      program_counter += 1;
       break;
-    case 0x76: // ROR Zero Page,X
+    }
+    case 0x76: { // ROR Zero Page,X
+      uint16_t addr = get_operand_address(AddressingMode::ZeroPage_X);
+      ror(addr);
+      program_counter += 1;
       break;
-    case 0x6E: // ROR Absolute
+    }
+    case 0x6E: { // ROR Absolute
+      uint16_t addr = get_operand_address(AddressingMode::Absolute);
+      ror(addr);
+      program_counter += 2;
       break;
-    case 0x7E: // ROR Absolute,X
+    }
+    case 0x7E: { // ROR Absolute,X
+      uint16_t addr = get_operand_address(AddressingMode::Absolute_X);
+      ror(addr);
+      program_counter += 2;
       break;
+    }
     case 0x4C: { // JMP Absolute
       uint16_t addr = bus.read_u16(program_counter);
       program_counter = addr;
@@ -494,6 +660,11 @@ void CPU::run(const std::function<void(CPU &)> &trace_callback) {
     case 0x60: { // RTS
       uint16_t addr = stack_pop_u16();
       program_counter = static_cast<uint16_t>(addr + 1);
+      break;
+    }
+    case 0x40: { // RTI
+      status = (stack_pop() & 0b11101111) | 0b00100000;
+      program_counter = stack_pop_u16();
       break;
     }
     case 0x90: // BCC
@@ -547,100 +718,260 @@ void CPU::run(const std::function<void(CPU &)> &trace_callback) {
       and_op(param);
       break;
     }
-    case 0x25: // AND Zero Page
+    case 0x25: { // AND Zero Page
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
+      program_counter += 1;
+      and_op(param);
       break;
-    case 0x35: // AND Zero Page,X
+    }
+    case 0x35: { // AND Zero Page,X
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage_X));
+      program_counter += 1;
+      and_op(param);
       break;
-    case 0x2D: // AND Absolute
+    }
+    case 0x2D: { // AND Absolute
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute));
+      program_counter += 2;
+      and_op(param);
       break;
-    case 0x3D: // AND Absolute,X
+    }
+    case 0x3D: { // AND Absolute,X
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute_X));
+      program_counter += 2;
+      and_op(param);
       break;
-    case 0x39: // AND Absolute,Y
+    }
+    case 0x39: { // AND Absolute,Y
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute_Y));
+      program_counter += 2;
+      and_op(param);
       break;
-    case 0x21: // AND (Indirect,X)
+    }
+    case 0x21: { // AND (Indirect,X)
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Indirect_X));
+      program_counter += 1;
+      and_op(param);
       break;
-    case 0x31: // AND (Indirect),Y
+    }
+    case 0x31: { // AND (Indirect),Y
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Indirect_Y));
+      program_counter += 1;
+      and_op(param);
       break;
+    }
     case 0x49: { // EOR Immediate
       uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       eor(param);
       break;
     }
-    case 0x45: // EOR Zero Page
+    case 0x45: { // EOR Zero Page
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
+      program_counter += 1;
+      eor(param);
       break;
-    case 0x55: // EOR Zero Page,X
+    }
+    case 0x55: { // EOR Zero Page,X
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage_X));
+      program_counter += 1;
+      eor(param);
       break;
-    case 0x4D: // EOR Absolute
+    }
+    case 0x4D: { // EOR Absolute
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute));
+      program_counter += 2;
+      eor(param);
       break;
-    case 0x5D: // EOR Absolute,X
+    }
+    case 0x5D: { // EOR Absolute,X
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute_X));
+      program_counter += 2;
+      eor(param);
       break;
-    case 0x59: // EOR Absolute,Y
+    }
+    case 0x59: { // EOR Absolute,Y
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute_Y));
+      program_counter += 2;
+      eor(param);
       break;
-    case 0x41: // EOR (Indirect,X)
+    }
+    case 0x41: { // EOR (Indirect,X)
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Indirect_X));
+      program_counter += 1;
+      eor(param);
       break;
-    case 0x51: // EOR (Indirect),Y
+    }
+    case 0x51: { // EOR (Indirect),Y
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Indirect_Y));
+      program_counter += 1;
+      eor(param);
       break;
+    }
     case 0x09: { // ORA Immediate
       uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       ora(param);
       break;
     }
-    case 0x05: // ORA Zero Page
+    case 0x05: { // ORA Zero Page
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
+      program_counter += 1;
+      ora(param);
       break;
-    case 0x15: // ORA Zero Page,X
+    }
+    case 0x15: { // ORA Zero Page,X
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage_X));
+      program_counter += 1;
+      ora(param);
       break;
-    case 0x0D: // ORA Absolute
+    }
+    case 0x0D: { // ORA Absolute
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute));
+      program_counter += 2;
+      ora(param);
       break;
-    case 0x1D: // ORA Absolute,X
+    }
+    case 0x1D: { // ORA Absolute,X
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute_X));
+      program_counter += 2;
+      ora(param);
       break;
-    case 0x19: // ORA Absolute,Y
+    }
+    case 0x19: { // ORA Absolute,Y
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute_Y));
+      program_counter += 2;
+      ora(param);
       break;
-    case 0x01: // ORA (Indirect,X)
+    }
+    case 0x01: { // ORA (Indirect,X)
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Indirect_X));
+      program_counter += 1;
+      ora(param);
       break;
-    case 0x11: // ORA (Indirect),Y
+    }
+    case 0x11: { // ORA (Indirect),Y
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Indirect_Y));
+      program_counter += 1;
+      ora(param);
       break;
+    }
     case 0xC9: { // CMP Immediate
       uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       cmp(param);
       break;
     }
-    case 0xC5: // CMP Zero Page
+    case 0xC5: { // CMP Zero Page
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
+      program_counter += 1;
+      cmp(param);
       break;
-    case 0xD5: // CMP Zero Page,X
+    }
+    case 0xD5: { // CMP Zero Page,X
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage_X));
+      program_counter += 1;
+      cmp(param);
       break;
-    case 0xCD: // CMP Absolute
+    }
+    case 0xCD: { // CMP Absolute
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute));
+      program_counter += 2;
+      cmp(param);
       break;
-    case 0xDD: // CMP Absolute,X
+    }
+    case 0xDD: { // CMP Absolute,X
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute_X));
+      program_counter += 2;
+      cmp(param);
       break;
-    case 0xD9: // CMP Absolute,Y
+    }
+    case 0xD9: { // CMP Absolute,Y
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute_Y));
+      program_counter += 2;
+      cmp(param);
       break;
-    case 0xC1: // CMP (Indirect,X)
+    }
+    case 0xC1: { // CMP (Indirect,X)
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Indirect_X));
+      program_counter += 1;
+      cmp(param);
       break;
-    case 0xD1: // CMP (Indirect),Y
+    }
+    case 0xD1: { // CMP (Indirect),Y
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Indirect_Y));
+      program_counter += 1;
+      cmp(param);
       break;
+    }
     case 0xE0: { // CPX Immediate
       uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       cpx(param);
       break;
     }
-    case 0xE4: // CPX Zero Page
+    case 0xE4: { // CPX Zero Page
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
+      program_counter += 1;
+      cpx(param);
       break;
-    case 0xEC: // CPX Absolute
+    }
+    case 0xEC: { // CPX Absolute
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute));
+      program_counter += 2;
+      cpx(param);
       break;
+    }
     case 0xC0: { // CPY Immediate
       uint8_t param = bus.read_u8(program_counter);
       program_counter++;
       cpy(param);
       break;
     }
-    case 0xC4: // CPY Zero Page
+    case 0xC4: { // CPY Zero Page
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
+      program_counter += 1;
+      cpy(param);
       break;
-    case 0xCC: // CPY Absolute
+    }
+    case 0xCC: { // CPY Absolute
+      uint8_t param =
+          bus.read_u8(get_operand_address(AddressingMode::Absolute));
+      program_counter += 2;
+      cpy(param);
       break;
+    }
     case 0x24: { // BIT Zero Page
       uint8_t param =
           bus.read_u8(get_operand_address(AddressingMode::ZeroPage));
@@ -800,6 +1131,70 @@ void CPU::ror_accumulator() {
   register_a |= (old_carry << 7);
   update_zero_and_negative_flags(register_a);
   if (old_a & 0b00000001) {
+    status |= 0b00000001;
+  } else {
+    status &= 0b11111110;
+  }
+}
+
+void CPU::inc(uint16_t addr) {
+  uint8_t value = static_cast<uint8_t>(bus.read_u8(addr) + 1);
+  bus.write_u8(addr, value);
+  update_zero_and_negative_flags(value);
+}
+
+void CPU::dec(uint16_t addr) {
+  uint8_t value = static_cast<uint8_t>(bus.read_u8(addr) - 1);
+  bus.write_u8(addr, value);
+  update_zero_and_negative_flags(value);
+}
+
+void CPU::asl(uint16_t addr) {
+  uint8_t old_value = bus.read_u8(addr);
+  uint8_t value = static_cast<uint8_t>(old_value << 1);
+  bus.write_u8(addr, value);
+  update_zero_and_negative_flags(value);
+  if (old_value & 0b10000000) {
+    status |= 0b00000001;
+  } else {
+    status &= 0b11111110;
+  }
+}
+
+void CPU::lsr(uint16_t addr) {
+  uint8_t old_value = bus.read_u8(addr);
+  uint8_t value = static_cast<uint8_t>(old_value >> 1);
+  bus.write_u8(addr, value);
+  update_zero_and_negative_flags(value);
+  if (old_value & 0b00000001) {
+    status |= 0b00000001;
+  } else {
+    status &= 0b11111110;
+  }
+}
+
+void CPU::rol(uint16_t addr) {
+  uint8_t old_carry = status & 1;
+  uint8_t old_value = bus.read_u8(addr);
+  uint8_t value = static_cast<uint8_t>(old_value << 1);
+  value |= old_carry;
+  bus.write_u8(addr, value);
+  update_zero_and_negative_flags(value);
+  if (old_value & 0b10000000) {
+    status |= 0b00000001;
+  } else {
+    status &= 0b11111110;
+  }
+}
+
+void CPU::ror(uint16_t addr) {
+  uint8_t old_carry = status & 1;
+  uint8_t old_value = bus.read_u8(addr);
+  uint8_t value = static_cast<uint8_t>(old_value >> 1);
+  value = static_cast<uint8_t>(value | (old_carry << 7));
+  bus.write_u8(addr, value);
+  update_zero_and_negative_flags(value);
+  if (old_value & 0b00000001) {
     status |= 0b00000001;
   } else {
     status &= 0b11111110;

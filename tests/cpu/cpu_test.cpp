@@ -718,3 +718,194 @@ TEST(CpuTest, BitAbsolute) {
   EXPECT_EQ(cpu.status & 0b1000'0000, 0);
   EXPECT_EQ(cpu.status & 0b0100'0000, 0b0100'0000);
 }
+
+TEST(CpuTest, AdcZeroPage) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xa9, 0x10, 0x65, 0x20, 0x00});
+  cpu.reset();
+  bus.write_u8(0x20, 0x05);
+  cpu.run();
+  EXPECT_EQ(cpu.register_a, 0x15);
+}
+
+TEST(CpuTest, SbcAbsolute) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0x38, 0xa9, 0x10, 0xed, 0x00, 0x03, 0x00});
+  cpu.reset();
+  bus.write_u8(0x0300, 0x05);
+  cpu.run();
+  EXPECT_EQ(cpu.register_a, 0x0B);
+}
+
+TEST(CpuTest, AndZeroPageX) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xa2, 0x02, 0xa9, 0xFF, 0x35, 0x10, 0x00});
+  cpu.reset();
+  bus.write_u8(0x12, 0x0F);
+  cpu.run();
+  EXPECT_EQ(cpu.register_a, 0x0F);
+}
+
+TEST(CpuTest, EorAbsoluteX) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xa2, 0x01, 0xa9, 0xFF, 0x5d, 0x00, 0x03, 0x00});
+  cpu.reset();
+  bus.write_u8(0x0301, 0x0F);
+  cpu.run();
+  EXPECT_EQ(cpu.register_a, 0xF0);
+}
+
+TEST(CpuTest, OraIndirectY) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xa0, 0x04, 0xa9, 0x0F, 0x11, 0x20, 0x00});
+  cpu.reset();
+  bus.write_u8(0x20, 0x00);
+  bus.write_u8(0x21, 0x04);
+  bus.write_u8(0x0404, 0xF0);
+  cpu.run();
+  EXPECT_EQ(cpu.register_a, 0xFF);
+}
+
+TEST(CpuTest, CmpIndirectX) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xa2, 0x04, 0xa9, 0x10, 0xc1, 0x20, 0x00});
+  cpu.reset();
+  bus.write_u8(0x24, 0x00);
+  bus.write_u8(0x25, 0x04);
+  bus.write_u8(0x0400, 0x10);
+  cpu.run();
+  EXPECT_NE(cpu.status & 0b0000'0010, 0);
+  EXPECT_NE(cpu.status & 0b0000'0001, 0);
+}
+
+TEST(CpuTest, CpxAbsolute) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xa2, 0x20, 0xec, 0x00, 0x03, 0x00});
+  cpu.reset();
+  bus.write_u8(0x0300, 0x10);
+  cpu.run();
+  EXPECT_NE(cpu.status & 0b0000'0001, 0);
+  EXPECT_EQ(cpu.status & 0b0000'0010, 0);
+}
+
+TEST(CpuTest, CpyZeroPage) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xa0, 0x05, 0xc4, 0x10, 0x00});
+  cpu.reset();
+  bus.write_u8(0x10, 0x0A);
+  cpu.run();
+  EXPECT_EQ(cpu.status & 0b0000'0001, 0);
+  EXPECT_NE(cpu.status & 0b1000'0000, 0);
+}
+
+TEST(CpuTest, RtiRestoresStatusAndProgramCounterNoOffset) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0x40});
+  cpu.reset();
+  uint8_t original_status = 0b00000001;
+  cpu.stack_push_u16(0x1234);
+  cpu.stack_push(original_status | 0b00110000);
+  cpu.status = 0;
+
+  std::vector<uint16_t> pcs_seen;
+  cpu.run([&](CPU &c) { pcs_seen.push_back(c.program_counter); });
+
+  ASSERT_GE(pcs_seen.size(), 2u);
+  EXPECT_EQ(pcs_seen[1], 0x1234);
+  EXPECT_NE(cpu.status & 0b00000001, 0);
+}
+
+TEST(CpuTest, IncZeroPage) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xe6, 0x10, 0x00});
+  cpu.reset();
+  bus.write_u8(0x10, 0x05);
+  cpu.run();
+  EXPECT_EQ(bus.read_u8(0x10), 0x06);
+}
+
+TEST(CpuTest, IncWrapsToZeroAndSetsZeroFlag) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xee, 0x00, 0x03, 0x00});
+  cpu.reset();
+  bus.write_u8(0x0300, 0xFF);
+  cpu.run();
+  EXPECT_EQ(bus.read_u8(0x0300), 0x00);
+  EXPECT_NE(cpu.status & 0b0000'0010, 0);
+}
+
+TEST(CpuTest, DecZeroPageX) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xa2, 0x02, 0xd6, 0x10, 0x00});
+  cpu.reset();
+  bus.write_u8(0x12, 0x05);
+  cpu.run();
+  EXPECT_EQ(bus.read_u8(0x12), 0x04);
+}
+
+TEST(CpuTest, DecUnderflowsToFf) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xc6, 0x10, 0x00});
+  cpu.reset();
+  bus.write_u8(0x10, 0x00);
+  cpu.run();
+  EXPECT_EQ(bus.read_u8(0x10), 0xFF);
+  EXPECT_NE(cpu.status & 0b1000'0000, 0);
+}
+
+TEST(CpuTest, AslZeroPageSetsCarryFromOldBit7) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0x06, 0x10, 0x00});
+  cpu.reset();
+  bus.write_u8(0x10, 0b10000001);
+  cpu.run();
+  EXPECT_EQ(bus.read_u8(0x10), 0b00000010);
+  EXPECT_NE(cpu.status & 0b0000'0001, 0);
+}
+
+TEST(CpuTest, LsrAbsoluteXSetsCarryFromOldBit0) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xa2, 0x01, 0x5e, 0x00, 0x03, 0x00});
+  cpu.reset();
+  bus.write_u8(0x0301, 0b00000011);
+  cpu.run();
+  EXPECT_EQ(bus.read_u8(0x0301), 0b00000001);
+  EXPECT_NE(cpu.status & 0b0000'0001, 0);
+}
+
+TEST(CpuTest, RolZeroPageBringsInOldCarry) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0x38, 0x26, 0x10, 0x00});
+  cpu.reset();
+  bus.write_u8(0x10, 0b01000000);
+  cpu.run();
+  EXPECT_EQ(bus.read_u8(0x10), 0b10000001);
+  EXPECT_EQ(cpu.status & 0b0000'0001, 0);
+}
+
+TEST(CpuTest, RorZeroPageXBringsInOldCarry) {
+  Bus bus;
+  CPU cpu(bus);
+  cpu.load({0xa2, 0x01, 0x38, 0x76, 0x10, 0x00});
+  cpu.reset();
+  bus.write_u8(0x11, 0b00000010);
+  cpu.run();
+  EXPECT_EQ(bus.read_u8(0x11), 0b10000001);
+  EXPECT_EQ(cpu.status & 0b0000'0001, 0);
+}
