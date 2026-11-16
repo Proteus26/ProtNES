@@ -1,14 +1,9 @@
 #include "cpu/cpu.hpp"
 #include "cpu/opcodes.hpp"
 #include <cstdint>
-#include <cstdio>
+#include <format>
 #include <stdexcept>
-#include <string>
 #include <vector>
-
-CPU::CPU(Bus &bus)
-    : register_a(0), register_x(0), register_y(0), status(0),
-      program_counter(0), stack_pointer(STACK_RESET), bus(bus) {}
 
 void CPU::reset() {
   register_a = 0;
@@ -16,7 +11,7 @@ void CPU::reset() {
   register_y = 0;
   status = 0;
   stack_pointer = STACK_RESET;
-  program_counter = bus.read_u16(0xFFFC);
+  program_counter = bus.read_u16(Bus::RESET_VECTOR);
   halted = false;
 }
 
@@ -46,11 +41,9 @@ void CPU::step() {
   std::uint8_t code = bus.read_u8(program_counter);
   const Opcode &op = OPCODES[code];
 
-  if (op.handler == nullptr) {
-    char msg[64];
-    std::snprintf(msg, sizeof msg, "Unknown opcode $%02X at $%04X", code,
-                  program_counter);
-    throw std::runtime_error(msg);
+  if (!op.implemented()) [[unlikely]] {
+    throw std::runtime_error(std::format("Unknown opcode ${:02X} at ${:04X}",
+                                         code, program_counter));
   }
 
   operand_pc = static_cast<std::uint16_t>(program_counter + 1);
@@ -87,23 +80,21 @@ std::uint16_t CPU::get_operand_address(AddressingMode mode) const {
     std::uint16_t ptr = bus.read_u16(operand_pc);
     std::uint16_t hi_addr =
         static_cast<std::uint16_t>((ptr & 0xFF00) | ((ptr + 1) & 0x00FF));
-    return static_cast<std::uint16_t>(bus.read_u8(ptr) |
-                                      (bus.read_u8(hi_addr) << 8));
+    return make_u16(bus.read_u8(ptr), bus.read_u8(hi_addr));
   }
 
   case Mode::Indirect_X: {
     std::uint8_t ptr =
         static_cast<std::uint8_t>(bus.read_u8(operand_pc) + register_x);
-    std::uint8_t lo = bus.read_u8(ptr);
-    std::uint8_t hi = bus.read_u8(static_cast<std::uint8_t>(ptr + 1));
-    return static_cast<std::uint16_t>(lo | (hi << 8));
+    return make_u16(bus.read_u8(ptr),
+                    bus.read_u8(static_cast<std::uint8_t>(ptr + 1)));
   }
 
   case Mode::Indirect_Y: {
     std::uint8_t ptr = bus.read_u8(operand_pc);
-    std::uint8_t lo = bus.read_u8(ptr);
-    std::uint8_t hi = bus.read_u8(static_cast<std::uint8_t>(ptr + 1));
-    return static_cast<std::uint16_t>((lo | (hi << 8)) + register_y);
+    std::uint16_t base = make_u16(
+        bus.read_u8(ptr), bus.read_u8(static_cast<std::uint8_t>(ptr + 1)));
+    return static_cast<std::uint16_t>(base + register_y);
   }
 
   case Mode::Implied:
@@ -133,7 +124,7 @@ void CPU::stack_push_u16(std::uint16_t value) {
 std::uint16_t CPU::stack_pop_u16() {
   std::uint8_t lo = stack_pop();
   std::uint8_t hi = stack_pop();
-  return static_cast<std::uint16_t>(lo | (hi << 8));
+  return make_u16(lo, hi);
 }
 
 void CPU::set_flag(std::uint8_t flag, bool on) {

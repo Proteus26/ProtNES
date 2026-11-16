@@ -1,21 +1,22 @@
-#ifndef BUS_HPP
-#define BUS_HPP
+#pragma once
 
 #include <array>
 #include <cstdint>
-#include <vector>
+#include <span>
 
-struct Bus {
+[[nodiscard]] constexpr std::uint16_t make_u16(std::uint8_t lo, std::uint8_t hi) {
+  return static_cast<std::uint16_t>(lo | (hi << 8));
+}
+
+class Bus {
 public:
-  Bus();
-
-  std::uint8_t read_u8(std::uint16_t addr) const;
+  [[nodiscard]] std::uint8_t read_u8(std::uint16_t addr) const;
   void write_u8(std::uint16_t addr, std::uint8_t data);
 
-  std::uint16_t read_u16(std::uint16_t addr) const;
+  [[nodiscard]] std::uint16_t read_u16(std::uint16_t addr) const;
   void write_u16(std::uint16_t addr, std::uint16_t data);
 
-  void load_program(const std::vector<std::uint8_t> &program);
+  void load_program(std::span<const std::uint8_t> program);
 
   static constexpr std::uint16_t RAM_START = 0x0000;
   static constexpr std::uint16_t RAM_MIRRORS_END = 0x1FFF;
@@ -24,10 +25,9 @@ public:
   static constexpr std::uint16_t APU_IO_START = 0x4000;
   static constexpr std::uint16_t APU_IO_END = 0x401F;
   static constexpr std::uint16_t PRG_ROM_START = 0x8000;
+  static constexpr std::uint16_t RESET_VECTOR = 0xFFFC;
 
 private:
-  std::array<std::uint8_t, 2048> cpu_vram{};
+  std::array<std::uint8_t, 0x0800> cpu_vram{};
   std::array<std::uint8_t, 0x8000> prg_rom{};
 };
-
-#endif // BUS_HPP

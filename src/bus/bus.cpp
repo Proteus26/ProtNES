@@ -1,12 +1,12 @@
 #include "bus/bus.hpp"
-#include <cstdint>
 
-Bus::Bus() = default;
+#include <algorithm>
+#include <format>
+#include <stdexcept>
 
 std::uint8_t Bus::read_u8(std::uint16_t addr) const {
   if (addr <= RAM_MIRRORS_END) {
-    std::uint16_t mirrored = addr & 0x07FF;
-    return cpu_vram[mirrored];
+    return cpu_vram[addr & 0x07FF];
   }
 
   if (addr >= PPU_REGISTERS_START && addr <= PPU_REGISTERS_MIRRORS_END) {
@@ -28,8 +28,7 @@ std::uint8_t Bus::read_u8(std::uint16_t addr) const {
 
 void Bus::write_u8(std::uint16_t addr, std::uint8_t data) {
   if (addr <= RAM_MIRRORS_END) {
-    std::uint16_t mirrored = addr & 0x07FF;
-    cpu_vram[mirrored] = data;
+    cpu_vram[addr & 0x07FF] = data;
     return;
   }
 
@@ -45,14 +44,11 @@ void Bus::write_u8(std::uint16_t addr, std::uint8_t data) {
 
   if (addr >= PRG_ROM_START) {
     prg_rom[addr - PRG_ROM_START] = data;
-    return;
   }
 }
 
 std::uint16_t Bus::read_u16(std::uint16_t addr) const {
-  std::uint16_t lo = read_u8(addr);
-  std::uint16_t hi = read_u8(static_cast<std::uint16_t>(addr + 1));
-  return static_cast<std::uint16_t>(lo | (hi << 8));
+  return make_u16(read_u8(addr), read_u8(static_cast<std::uint16_t>(addr + 1)));
 }
 
 void Bus::write_u16(std::uint16_t addr, std::uint16_t data) {
@@ -61,9 +57,11 @@ void Bus::write_u16(std::uint16_t addr, std::uint16_t data) {
            static_cast<std::uint8_t>(data >> 8));
 }
 
-void Bus::load_program(const std::vector<std::uint8_t> &program) {
-  for (std::size_t i = 0; i < program.size(); ++i) {
-    write_u8(static_cast<std::uint16_t>(PRG_ROM_START + i), program[i]);
+void Bus::load_program(std::span<const std::uint8_t> program) {
+  if (program.size() > prg_rom.size()) {
+    throw std::length_error(std::format("Program is {} bytes, PRG ROM holds {}",
+                                        program.size(), prg_rom.size()));
   }
-  write_u16(0xFFFC, PRG_ROM_START);
+  std::ranges::copy(program, prg_rom.begin());
+  write_u16(RESET_VECTOR, PRG_ROM_START);
 }

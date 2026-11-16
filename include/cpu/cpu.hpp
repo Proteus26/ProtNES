@@ -1,12 +1,11 @@
-#ifndef CPU_HPP
-#define CPU_HPP
+#pragma once
 
 #include "bus/bus.hpp"
 #include <cstdint>
 #include <functional>
 #include <vector>
 
-enum class AddressingMode {
+enum class AddressingMode : std::uint8_t {
   Implied,
   Accumulator,
   Immediate,
@@ -23,30 +22,30 @@ enum class AddressingMode {
 };
 
 // Status register bits
-struct Flag {
-  static constexpr std::uint8_t Carry = 1 << 0;
-  static constexpr std::uint8_t Zero = 1 << 1;
-  static constexpr std::uint8_t InterruptDisable = 1 << 2;
-  static constexpr std::uint8_t Decimal = 1 << 3;
-  static constexpr std::uint8_t Break = 1 << 4;
-  static constexpr std::uint8_t Unused = 1 << 5;
-  static constexpr std::uint8_t Overflow = 1 << 6;
-  static constexpr std::uint8_t Negative = 1 << 7;
-};
+namespace Flag {
+inline constexpr std::uint8_t Carry = 1 << 0;
+inline constexpr std::uint8_t Zero = 1 << 1;
+inline constexpr std::uint8_t InterruptDisable = 1 << 2;
+inline constexpr std::uint8_t Decimal = 1 << 3;
+inline constexpr std::uint8_t Break = 1 << 4;
+inline constexpr std::uint8_t Unused = 1 << 5;
+inline constexpr std::uint8_t Overflow = 1 << 6;
+inline constexpr std::uint8_t Negative = 1 << 7;
+} // namespace Flag
 
 struct CPU {
-  std::uint8_t register_a;
-  std::uint8_t register_x;
-  std::uint8_t register_y;
-  std::uint8_t status;
-  std::uint16_t program_counter;
-  std::uint8_t stack_pointer;
-  Bus &bus;
-
   static constexpr std::uint16_t STACK_BASE = 0x0100;
   static constexpr std::uint8_t STACK_RESET = 0xFD;
 
-  explicit CPU(Bus &bus);
+  std::uint8_t register_a = 0;
+  std::uint8_t register_x = 0;
+  std::uint8_t register_y = 0;
+  std::uint8_t status = 0;
+  std::uint16_t program_counter = 0;
+  std::uint8_t stack_pointer = STACK_RESET;
+  Bus &bus;
+
+  explicit CPU(Bus &bus) : bus(bus) {}
 
   void load(const std::vector<std::uint8_t> &program);
   void load_and_run(const std::vector<std::uint8_t> &program);
@@ -57,15 +56,15 @@ struct CPU {
 
   void step();
 
-  std::uint16_t get_operand_address(AddressingMode mode) const;
+  [[nodiscard]] std::uint16_t get_operand_address(AddressingMode mode) const;
 
   void stack_push(std::uint8_t value);
-  std::uint8_t stack_pop();
+  [[nodiscard]] std::uint8_t stack_pop();
   void stack_push_u16(std::uint16_t value);
-  std::uint16_t stack_pop_u16();
+  [[nodiscard]] std::uint16_t stack_pop_u16();
 
   void set_flag(std::uint8_t flag, bool on);
-  bool get_flag(std::uint8_t flag) const;
+  [[nodiscard]] bool get_flag(std::uint8_t flag) const;
   void update_zero_and_negative_flags(std::uint8_t result);
 
   // Instruction handlers
@@ -157,4 +156,3 @@ private:
   template <typename Op> void modify(Mode mode, Op op);
 };
 
-#endif // CPU_HPP
