@@ -3,28 +3,27 @@ NES Emulator built using ~Rust~ C++ (Switched to C++ because I just don't want t
 
 # Building
 
-Uses CMake + Ninja. If you're on the Nix flake dev shell (`nix develop`), everything below is already on `PATH`.
+Requires CMake 3.24+, Ninja, and a C++20 compiler. GoogleTest is used from
+the system if installed, otherwise CMake downloads it.
 
 ```sh
-mkdir -p build && cd build
-cmake -G Ninja ..
-ninja
+cmake -S . -B build -G Ninja
+cmake --build build
 ```
 
-Run it:
+Run it (prints the ROM header; only mapper 0 / NROM is supported so far):
 ```sh
-./protnes
+./build/protnes path/to/rom.nes
 ```
 
 Run the tests:
 ```sh
-ctest
+ctest --test-dir build
 # or directly:
-./protnes_tests
+./build/protnes_tests
 ```
 
-Rebuilding after changes is just `ninja` again from `build/` — no need to
-re-run `cmake` unless you add/remove source files or touch `CMakeLists.txt`.
+Pass `-DPROTNES_BUILD_TESTS=OFF` to skip building the tests.
 
 # To-do:
 * PPU

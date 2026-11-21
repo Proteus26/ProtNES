@@ -1,8 +1,6 @@
 #include "bus/bus.hpp"
 
-#include <algorithm>
-#include <format>
-#include <stdexcept>
+#include <utility>
 
 std::uint8_t Bus::read_u8(std::uint16_t addr) const {
   if (addr <= RAM_MIRRORS_END) {
@@ -19,8 +17,8 @@ std::uint8_t Bus::read_u8(std::uint16_t addr) const {
     return 0;
   }
 
-  if (addr >= PRG_ROM_START) {
-    return prg_rom[addr - PRG_ROM_START];
+  if (addr >= CARTRIDGE_START && cartridge) {
+    return cartridge->cpu_read(addr);
   }
 
   return 0;
@@ -42,8 +40,8 @@ void Bus::write_u8(std::uint16_t addr, std::uint8_t data) {
     return;
   }
 
-  if (addr >= PRG_ROM_START) {
-    prg_rom[addr - PRG_ROM_START] = data;
+  if (addr >= CARTRIDGE_START && cartridge) {
+    cartridge->cpu_write(addr, data);
   }
 }
 
@@ -57,11 +55,10 @@ void Bus::write_u16(std::uint16_t addr, std::uint16_t data) {
            static_cast<std::uint8_t>(data >> 8));
 }
 
+void Bus::insert_cartridge(Cartridge cart) {
+  cartridge = std::move(cart);
+}
+
 void Bus::load_program(std::span<const std::uint8_t> program) {
-  if (program.size() > prg_rom.size()) {
-    throw std::length_error(std::format("Program is {} bytes, PRG ROM holds {}",
-                                        program.size(), prg_rom.size()));
-  }
-  std::ranges::copy(program, prg_rom.begin());
-  write_u16(RESET_VECTOR, PRG_ROM_START);
+  insert_cartridge(Cartridge::from_program(program));
 }
